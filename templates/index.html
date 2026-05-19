@@ -1,0 +1,757 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>CrowdFlow — Crowd Mobilising System</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;800&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --bg:       #060a10;
+    --surface:  #0d1520;
+    --surface2: #111d2e;
+    --accent:   #00e5ff;
+    --accent2:  #ff4d6d;
+    --accent3:  #b8ff57;
+    --warn:     #ffaa00;
+    --text:     #c8ddf0;
+    --dim:      #4a6580;
+    --border:   rgba(0,229,255,0.12);
+    --green:    #00ff9d;
+    --red:      #ff4d6d;
+    --fhead:    'Syne', sans-serif;
+    --fmono:    'Space Mono', monospace;
+    --r:        4px;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--fmono);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background: repeating-linear-gradient(0deg, transparent, transparent 2px,
+      rgba(0,229,255,0.015) 2px, rgba(0,229,255,0.015) 4px);
+    pointer-events: none; z-index: 1000;
+  }
+
+  /* ── Header ── */
+  header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 16px 32px;
+    border-bottom: 1px solid var(--border);
+    background: rgba(13,21,32,0.95);
+    backdrop-filter: blur(10px);
+    position: sticky; top: 0; z-index: 100;
+  }
+  .logo { font-family: var(--fhead); font-weight: 800; font-size: 1.4rem; letter-spacing: -0.03em; color: var(--accent); }
+  .logo span { color: var(--accent2); }
+  .status-pill {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 0.68rem; letter-spacing: 0.12em; text-transform: uppercase;
+    color: var(--dim); padding: 6px 14px;
+    border: 1px solid var(--border); border-radius: 20px;
+  }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--dim); transition: background 0.3s; }
+  .dot.live { background: var(--green); box-shadow: 0 0 8px var(--green); animation: blink 1.5s infinite; }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+  /* ── Layout ── */
+  .app { display: grid; grid-template-columns: 340px 1fr; min-height: calc(100vh - 57px); }
+
+  /* ── Sidebar ── */
+  .sidebar {
+    border-right: 1px solid var(--border);
+    padding: 24px 20px;
+    display: flex; flex-direction: column; gap: 22px;
+    background: var(--surface);
+    overflow-y: auto;
+  }
+  .section-label {
+    font-size: 0.62rem; letter-spacing: 0.2em; text-transform: uppercase;
+    color: var(--accent); margin-bottom: 10px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .section-label::after { content:''; flex:1; height:1px; background: var(--border); }
+  label { display: block; font-size: 0.68rem; color: var(--dim); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 5px; }
+  input[type="number"] {
+    width: 100%; background: var(--bg); border: 1px solid var(--border);
+    border-radius: var(--r); color: var(--text); font-family: var(--fmono);
+    font-size: 0.82rem; padding: 8px 10px; outline: none; transition: border-color 0.2s;
+  }
+  input:focus { border-color: var(--accent); }
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+
+  /* room counter */
+  .counter { display: flex; align-items: center; gap: 8px; }
+  .counter input { width: 60px; text-align: center; }
+  .btn-icon {
+    width: 32px; height: 32px; border: 1px solid var(--border); background: var(--surface2);
+    color: var(--text); border-radius: var(--r); cursor: pointer; font-size: 1.1rem;
+    display: flex; align-items: center; justify-content: center; transition: all 0.2s;
+  }
+  .btn-icon:hover { border-color: var(--accent); color: var(--accent); }
+
+  #rooms-container { display: flex; flex-direction: column; gap: 12px; }
+  .room-cfg {
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: var(--r); padding: 12px;
+    animation: slideIn 0.2s ease;
+  }
+  @keyframes slideIn { from{opacity:0;transform:translateY(-5px)} to{opacity:1;transform:none} }
+  .room-cfg-title { font-family: var(--fhead); font-size: 0.85rem; font-weight: 600; color: var(--accent); margin-bottom: 10px; }
+
+  .btn-primary {
+    width: 100%; padding: 11px; background: var(--accent); color: var(--bg);
+    font-family: var(--fmono); font-size: 0.78rem; font-weight: 700;
+    letter-spacing: 0.12em; text-transform: uppercase; border: none;
+    border-radius: var(--r); cursor: pointer; transition: all 0.2s;
+  }
+  .btn-primary:hover { background: #33ecff; box-shadow: 0 4px 20px rgba(0,229,255,0.3); }
+  .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
+  .btn-danger {
+    width: 100%; padding: 9px; background: transparent; color: var(--accent2);
+    font-family: var(--fmono); font-size: 0.72rem; letter-spacing: 0.1em;
+    text-transform: uppercase; border: 1px solid var(--accent2);
+    border-radius: var(--r); cursor: pointer; transition: all 0.2s;
+  }
+  .btn-danger:hover { background: rgba(255,77,109,0.1); }
+
+  /* ── Main ── */
+  .main { padding: 24px 28px; display: flex; flex-direction: column; gap: 22px; overflow-y: auto; }
+
+  /* ── MAP PANEL ── */
+  .map-panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--r);
+    overflow: hidden;
+  }
+  .map-header {
+    padding: 12px 18px;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .map-title { font-family: var(--fhead); font-size: 0.9rem; font-weight: 600; color: var(--text); }
+  .map-legend { display: flex; gap: 14px; }
+  .legend-item { display: flex; align-items: center; gap: 5px; font-size: 0.62rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--dim); }
+  .legend-dot { width: 10px; height: 10px; border-radius: 2px; }
+
+  #map-svg-wrap {
+    width: 100%;
+    overflow-x: auto;
+    background: radial-gradient(ellipse at 50% 50%, rgba(0,229,255,0.04) 0%, transparent 70%);
+    padding: 16px;
+  }
+
+  /* SVG map styles */
+  #map-svg { display: block; margin: 0 auto; }
+
+  .map-edge { stroke: rgba(0,229,255,0.2); stroke-width: 2; fill: none; }
+  .map-edge-path { stroke: var(--accent); stroke-width: 3; fill: none;
+    stroke-dasharray: 8 4; animation: dashMove 0.8s linear infinite; }
+  @keyframes dashMove { to { stroke-dashoffset: -12; } }
+
+  .map-node-hallway { fill: var(--surface2); stroke: rgba(0,229,255,0.35); stroke-width: 1.5; }
+  .map-node-origin  { fill: rgba(184,255,87,0.15); stroke: var(--accent3); stroke-width: 2; }
+
+  /* room rect fill based on density — set via JS */
+  .map-node-room { stroke-width: 2; rx: 4; }
+
+  .node-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 9px; fill: var(--text);
+    text-anchor: middle; dominant-baseline: middle;
+    pointer-events: none;
+  }
+  .node-label-sm {
+    font-family: 'Space Mono', monospace;
+    font-size: 7.5px; fill: var(--dim);
+    text-anchor: middle; dominant-baseline: middle;
+    pointer-events: none;
+  }
+
+  /* animated traveller dot */
+  #traveller {
+    r: 8;
+    fill: var(--accent3);
+    filter: drop-shadow(0 0 6px var(--accent3));
+    display: none;
+  }
+  #traveller-ring {
+    r: 14; fill: none;
+    stroke: var(--accent3); stroke-width: 1.5; opacity: 0.4;
+    display: none;
+  }
+
+  /* ── Path banner ── */
+  #path-banner {
+    background: linear-gradient(135deg, rgba(0,229,255,0.07), rgba(0,229,255,0.02));
+    border: 1px solid rgba(0,229,255,0.22);
+    border-radius: var(--r); padding: 14px 20px; display: none;
+  }
+  #path-banner.show { display: block; }
+  .path-lbl { font-size: 0.62rem; letter-spacing: 0.18em; text-transform: uppercase; color: var(--accent); margin-bottom: 7px; }
+  .path-row { display: flex; align-items: center; flex-wrap: wrap; gap: 5px; }
+  .pnode { background: var(--surface2); border: 1px solid var(--border); padding: 3px 9px; border-radius: 2px; font-size: 0.75rem; }
+  .pnode.target { border-color: var(--accent3); color: var(--accent3); }
+  .parrow { color: var(--dim); font-size: 0.7rem; }
+  .path-meta { margin-top: 5px; font-size: 0.68rem; color: var(--dim); }
+
+  /* ── Camera grid ── */
+  #rooms-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px,1fr)); gap: 16px; }
+
+  .room-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); overflow: hidden; transition: border-color 0.3s; }
+  .room-card.available { border-color: rgba(0,255,157,0.18); }
+  .room-card.full      { border-color: rgba(255,77,109,0.28); }
+  .rcard-head { padding: 10px 14px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border); }
+  .rcard-name { font-family: var(--fhead); font-size: 0.92rem; font-weight: 600; }
+  .sbadge { font-size: 0.6rem; letter-spacing: 0.1em; text-transform: uppercase; padding: 2px 8px; border-radius: 2px; }
+  .sbadge.available { background: rgba(0,255,157,0.1); color: var(--green); border: 1px solid rgba(0,255,157,0.22); }
+  .sbadge.full      { background: rgba(255,77,109,0.1); color: var(--red);   border: 1px solid rgba(255,77,109,0.28); }
+  .video-wrap { position: relative; background: #000; aspect-ratio: 16/9; }
+  .video-wrap img { width:100%; height:100%; object-fit:cover; display:block; }
+  .vid-placeholder {
+    position:absolute; inset:0; display:flex; flex-direction:column;
+    align-items:center; justify-content:center; gap:6px;
+    color:var(--dim); font-size:0.7rem; letter-spacing:0.1em; text-transform:uppercase;
+  }
+  .cam-ico { font-size:1.8rem; opacity:0.25; }
+  .rcard-stats { padding: 12px 14px; display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; }
+  .stat-lbl { font-size: 0.58rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--dim); }
+  .stat-val { font-size: 1rem; font-weight: 700; margin-top: 2px; }
+  .bar-wrap { padding: 0 14px 12px; }
+  .bar-track { height: 3px; background: var(--surface2); border-radius: 2px; overflow: hidden; }
+  .bar-fill  { height: 100%; border-radius: 2px; transition: width 0.6s, background 0.3s; }
+
+  .empty-state {
+    grid-column: 1/-1; display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    padding: 60px 20px; gap: 12px; color: var(--dim);
+    border: 1px dashed var(--border); border-radius: var(--r);
+  }
+  .empty-ico { font-size: 2.4rem; opacity: 0.25; }
+  .empty-txt { font-size: 0.72rem; letter-spacing: 0.1em; text-transform: uppercase; }
+
+  #toast {
+    position: fixed; bottom: 20px; right: 20px;
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: var(--r); padding: 10px 18px; font-size: 0.75rem;
+    z-index: 999; opacity: 0; transform: translateY(8px);
+    transition: all 0.22s; pointer-events: none;
+  }
+  #toast.show { opacity:1; transform:none; }
+  #toast.success { border-color:var(--green); color:var(--green); }
+  #toast.error   { border-color:var(--red);   color:var(--red);   }
+
+  @media (max-width:860px) {
+    .app { grid-template-columns:1fr; }
+    .sidebar { border-right:none; border-bottom:1px solid var(--border); }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">Crowd<span>Flow</span></div>
+  <div class="status-pill">
+    <div class="dot" id="status-dot"></div>
+    <span id="status-text">Idle</span>
+  </div>
+</header>
+
+<div class="app">
+
+  <!-- ── Sidebar ── -->
+  <aside class="sidebar">
+    <div>
+      <div class="section-label">Configuration</div>
+      <label>Number of Rooms</label>
+      <div class="counter">
+        <button class="btn-icon" onclick="changeCount(-1)">−</button>
+        <input type="number" id="num-rooms" value="2" min="1" max="8" readonly/>
+        <button class="btn-icon" onclick="changeCount(1)">+</button>
+      </div>
+    </div>
+
+    <div>
+      <div class="section-label">Room Details</div>
+      <div id="rooms-container"></div>
+    </div>
+
+    <div style="margin-top:auto; display:flex; flex-direction:column; gap:9px;">
+      <button class="btn-primary" id="start-btn" onclick="startSystem()">▶ Start Monitoring</button>
+      <button class="btn-danger"  id="stop-btn"  onclick="stopSystem()" style="display:none">■ Stop</button>
+    </div>
+  </aside>
+
+  <!-- ── Main ── -->
+  <main class="main">
+
+    <!-- MAP -->
+    <div class="map-panel">
+      <div class="map-header">
+        <div class="map-title">Live Building Map</div>
+        <div class="map-legend">
+          <div class="legend-item"><div class="legend-dot" style="background:var(--green)"></div>Available</div>
+          <div class="legend-item"><div class="legend-dot" style="background:var(--warn)"></div>Busy</div>
+          <div class="legend-item"><div class="legend-dot" style="background:var(--red)"></div>Full</div>
+          <div class="legend-item"><div class="legend-dot" style="background:var(--accent3); border-radius:50%"></div>You</div>
+        </div>
+      </div>
+      <div id="map-svg-wrap">
+        <svg id="map-svg" width="860" height="460" viewBox="0 0 860 460"
+             xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <filter id="glow">
+              <feGaussianBlur stdDeviation="3" result="blur"/>
+              <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+            </filter>
+          </defs>
+          <!-- edges layer -->
+          <g id="svg-edges"></g>
+          <!-- path highlight layer -->
+          <g id="svg-path-edges"></g>
+          <!-- nodes layer -->
+          <g id="svg-nodes"></g>
+          <!-- traveller -->
+          <circle id="traveller-ring"/>
+          <circle id="traveller"/>
+        </svg>
+      </div>
+    </div>
+
+    <!-- PATH BANNER -->
+    <div id="path-banner">
+      <div class="path-lbl">Recommended Route</div>
+      <div class="path-row" id="path-row">—</div>
+      <div class="path-meta" id="path-meta"></div>
+    </div>
+
+    <!-- CAMERA GRID -->
+    <div id="rooms-grid">
+      <div class="empty-state">
+        <div class="empty-ico">📷</div>
+        <div class="empty-txt">Configure rooms and start monitoring</div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<div id="toast"></div>
+
+<script>
+
+let numRooms = 2;
+let isRunning = false;
+let pollInterval = null;
+
+// Traveller animation state
+let travPath = [];        // array of {x,y} waypoints
+let travT    = 0;         // 0..1 along current segment
+let travSeg  = 0;         // current segment index
+let rafId    = null;
+let lastGraphData = null;
+
+
+function changeCount(d) {
+  if (isRunning) return;
+  numRooms = Math.max(1, Math.min(8, numRooms + d));
+  document.getElementById('num-rooms').value = numRooms;
+  renderConfigs();
+}
+
+function renderConfigs() {
+  const c = document.getElementById('rooms-container');
+  c.innerHTML = '';
+  for (let i = 1; i <= numRooms; i++) {
+    c.innerHTML += `
+      <div class="room-cfg">
+        <div class="room-cfg-title">Room ${i}</div>
+        <div class="row2">
+          <div><label>Area (m²)</label><input type="number" id="r${i}-area" value="${10*i}" min="1"/></div>
+          <div><label>Camera #</label><input type="number" id="r${i}-cam"  value="${i-1}" min="0"/></div>
+          <div><label>X Coord</label><input type="number" id="r${i}-x"    value="${i*10}"/></div>
+          <div><label>Y Coord</label><input type="number" id="r${i}-y"    value="${i*5}"/></div>
+        </div>
+      </div>`;
+  }
+}
+
+
+async function startSystem() {
+  const payload = [];
+  for (let i = 1; i <= numRooms; i++) {
+    payload.push({
+      area:         parseFloat(document.getElementById(`r${i}-area`).value) || 10,
+      camera_index: parseInt(document.getElementById(`r${i}-cam`).value)    || 0,
+      x:            parseFloat(document.getElementById(`r${i}-x`).value)    || 0,
+      y:            parseFloat(document.getElementById(`r${i}-y`).value)    || 0,
+    });
+  }
+  document.getElementById('start-btn').disabled = true;
+  showToast('Starting…', '');
+  try {
+    const res  = await fetch('/setup', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({rooms: payload}) });
+    const data = await res.json();
+    if (data.status === 'ok') {
+      isRunning = true;
+      document.getElementById('start-btn').style.display = 'none';
+      document.getElementById('stop-btn').style.display  = 'block';
+      document.getElementById('status-dot').classList.add('live');
+      document.getElementById('status-text').textContent = 'Live';
+      renderCameraGrid(data.rooms);
+      startPolling();
+      showToast('System started!', 'success');
+    }
+  } catch(e) {
+    showToast('Flask not reachable — is app.py running?', 'error');
+    document.getElementById('start-btn').disabled = false;
+  }
+}
+
+async function stopSystem() {
+  await fetch('/stop', {method:'POST'});
+  isRunning = false;
+  clearInterval(pollInterval);
+  cancelAnimationFrame(rafId);
+  document.getElementById('start-btn').style.display  = 'block';
+  document.getElementById('start-btn').disabled = false;
+  document.getElementById('stop-btn').style.display   = 'none';
+  document.getElementById('status-dot').classList.remove('live');
+  document.getElementById('status-text').textContent  = 'Idle';
+  document.getElementById('path-banner').classList.remove('show');
+  clearMap();
+  document.getElementById('rooms-grid').innerHTML = `
+    <div class="empty-state"><div class="empty-ico">📷</div>
+    <div class="empty-txt">Configure rooms and start monitoring</div></div>`;
+
+  document.querySelectorAll('[id^="alert-"]').forEach(alert => {
+    alert.remove();
+});
+  showToast('Stopped', '');
+}
+
+
+function startPolling() {
+  pollInterval = setInterval(async () => {
+    try {
+      const [sRes, gRes] = await Promise.all([fetch('/status'), fetch('/graph')]);
+      const sData = await sRes.json();
+      const gData = await gRes.json();
+      updateCards(sData.rooms);
+      updatePath(sData.path);
+      drawMap(gData);
+      lastGraphData = gData;
+    } catch {}
+  }, 1500);
+}
+
+
+function renderCameraGrid(roomNames) {
+  document.getElementById('rooms-grid').innerHTML = roomNames.map(name => `
+    <div class="room-card" id="card-${name}">
+      <div class="rcard-head">
+        <div class="rcard-name">${name.replace('_',' ')}</div>
+        <div class="sbadge available" id="badge-${name}">Available</div>
+      </div>
+      <div class="video-wrap">
+        <img src="/video/${name}" alt="${name}"
+             onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"/>
+        <div class="vid-placeholder" style="display:none">
+          <div class="cam-ico">🎥</div><span>No feed</span>
+        </div>
+      </div>
+      <div class="rcard-stats">
+        <div class="stat-lbl">People</div>
+        <div class="stat-lbl">Capacity</div>
+        <div class="stat-lbl">Density</div>
+        <div class="stat-val" id="ppl-${name}">—</div>
+        <div class="stat-val" id="cap-${name}">—</div>
+        <div class="stat-val" id="den-${name}">—</div>
+      </div>
+      <div class="bar-wrap"><div class="bar-track"><div class="bar-fill" id="bar-${name}" style="width:0%;background:var(--green)"></div></div></div>
+    </div>`).join('');
+}
+
+function updateCards(rooms) {
+  for (const [name, d] of Object.entries(rooms)) {
+    const pct  = Math.min(d.density * 100, 100);
+    const full = d.status === 'full';
+    const g = id => document.getElementById(`${id}-${name}`);
+    if (g('ppl')) g('ppl').textContent = d.people;
+    if (g('cap')) g('cap').textContent = d.capacity;
+    if (g('den')) g('den').textContent = (d.density*100).toFixed(0)+'%';
+    const bar   = g('bar');
+    const badge = g('badge');
+    const card  = document.getElementById(`card-${name}`);
+    if (bar)   { bar.style.width = pct+'%'; bar.style.background = pct<70?'var(--green)':pct<100?'var(--warn)':'var(--red)'; }
+    if (badge) { badge.textContent = full?'Full':'Available'; badge.className = 'sbadge '+(full?'full':'available'); }
+    if (card)  { card.className = 'room-card '+(full?'full':'available'); }
+    // GENERAL ROOM FULL ALERTS
+
+const existingAlert = document.getElementById(`alert-${name}`);
+
+if (full) {
+
+  // create alert only if not already present
+  if (!existingAlert) {
+
+    const alertBox = document.createElement("div");
+    alertBox.id = `alert-${name}`;
+
+    alertBox.style.background = "rgba(255,77,109,0.15)";
+    alertBox.style.border = "2px solid #ff4d6d";
+    alertBox.style.color = "#ff4d6d";
+    alertBox.style.padding = "14px";
+    alertBox.style.marginBottom = "12px";
+    alertBox.style.borderRadius = "4px";
+    alertBox.style.fontFamily = "var(--fmono)";
+    alertBox.style.fontWeight = "700";
+    alertBox.style.letterSpacing = "0.08em";
+    alertBox.style.textTransform = "uppercase";
+    alertBox.style.textAlign = "center";
+    alertBox.style.boxShadow = "0 0 15px rgba(255,77,109,0.4)";
+    alertBox.style.animation = "blink 1s infinite";
+
+    alertBox.innerHTML = `⚠ ${name.replace('_',' ')} FULL`;
+
+    document.querySelector(".main").prepend(alertBox);
+  }
+
+} else {
+
+  // remove alert if room becomes available
+  if (existingAlert) {
+    existingAlert.remove();
+  }
+}
+  }
+}
+
+
+function updatePath(pathInfo) {
+  const banner = document.getElementById('path-banner');
+  if (!pathInfo.target) { banner.classList.remove('show'); return; }
+  banner.classList.add('show');
+  document.getElementById('path-row').innerHTML = pathInfo.path.map((n,i) => {
+    const isLast = i === pathInfo.path.length-1;
+    return `<span class="pnode ${isLast?'target':''}">${n.replace('_',' ')}</span>${i<pathInfo.path.length-1?'<span class="parrow">→</span>':''}`;
+  }).join('');
+  document.getElementById('path-meta').textContent = `Distance: ${pathInfo.length}m · Target: ${pathInfo.target}`;
+}
+
+
+function clearMap() {
+  ['svg-edges','svg-path-edges','svg-nodes'].forEach(id => {
+    document.getElementById(id).innerHTML = '';
+  });
+  hideTraveller();
+}
+
+function densityColor(density) {
+  if (density < 0.5)  return { fill: 'rgba(0,255,157,0.18)',  stroke: '#00ff9d' };
+  if (density < 0.75) return { fill: 'rgba(255,170,0,0.18)',  stroke: '#ffaa00' };
+  if (density < 1.0)  return { fill: 'rgba(255,100,0,0.2)',   stroke: '#ff6400' };
+  return               { fill: 'rgba(255,77,109,0.22)',  stroke: '#ff4d6d' };
+}
+
+function drawMap(gData) {
+  const eLayer  = document.getElementById('svg-edges');
+  const pLayer  = document.getElementById('svg-path-edges');
+  const nLayer  = document.getElementById('svg-nodes');
+  eLayer.innerHTML = '';
+  pLayer.innerHTML = '';
+  nLayer.innerHTML = '';
+
+  const path     = gData.path.path || [];
+  const pathSet  = new Set();
+  for (let i = 0; i < path.length-1; i++) pathSet.add(`${path[i]}|${path[i+1]}`);
+
+  const nodeMap = {};
+  gData.nodes.forEach(n => { nodeMap[n.id] = n; });
+
+  // ── Draw edges ──
+  gData.edges.forEach(e => {
+    const key1 = `${e.from}|${e.to}`;
+    const key2 = `${e.to}|${e.from}`;
+    const onPath = pathSet.has(key1) || pathSet.has(key2);
+
+    const line = document.createElementNS('http://www.w3.org/2000/svg','line');
+    line.setAttribute('x1', e.x1); line.setAttribute('y1', e.y1);
+    line.setAttribute('x2', e.x2); line.setAttribute('y2', e.y2);
+    line.setAttribute('class', 'map-edge');
+    eLayer.appendChild(line);
+
+    if (onPath) {
+      const pline = document.createElementNS('http://www.w3.org/2000/svg','line');
+      pline.setAttribute('x1', e.x1); pline.setAttribute('y1', e.y1);
+      pline.setAttribute('x2', e.x2); pline.setAttribute('y2', e.y2);
+      pline.setAttribute('class', 'map-edge-path');
+      pLayer.appendChild(pline);
+    }
+  });
+
+  // ── Draw nodes ──
+  gData.nodes.forEach(n => {
+    const g = document.createElementNS('http://www.w3.org/2000/svg','g');
+
+    if (n.type === 'room') {
+      const W = 90, H = 50;
+      const c = densityColor(n.density);
+      const rect = document.createElementNS('http://www.w3.org/2000/svg','rect');
+      rect.setAttribute('x', n.x - W/2); rect.setAttribute('y', n.y - H/2);
+      rect.setAttribute('width', W);      rect.setAttribute('height', H);
+      rect.setAttribute('rx', 4);
+      rect.setAttribute('fill', c.fill); rect.setAttribute('stroke', c.stroke);
+      rect.setAttribute('stroke-width', 2);
+      g.appendChild(rect);
+
+      // room name
+      const t1 = document.createElementNS('http://www.w3.org/2000/svg','text');
+      t1.setAttribute('x', n.x); t1.setAttribute('y', n.y - 7);
+      t1.setAttribute('class','node-label');
+      t1.setAttribute('fill', c.stroke);
+      t1.textContent = n.id.replace('_',' ');
+      g.appendChild(t1);
+
+      // people/capacity
+      const t2 = document.createElementNS('http://www.w3.org/2000/svg','text');
+      t2.setAttribute('x', n.x); t2.setAttribute('y', n.y + 8);
+      t2.setAttribute('class','node-label-sm');
+      t2.textContent = `${n.people}/${n.capacity}`;
+      g.appendChild(t2);
+
+      // density bar inside rect
+      const barW = W - 16;
+      const fillW = Math.min(n.density, 1) * barW;
+      const barBg = document.createElementNS('http://www.w3.org/2000/svg','rect');
+      barBg.setAttribute('x', n.x - barW/2); barBg.setAttribute('y', n.y + 17);
+      barBg.setAttribute('width', barW); barBg.setAttribute('height', 3);
+      barBg.setAttribute('rx', 1); barBg.setAttribute('fill','rgba(255,255,255,0.08)');
+      g.appendChild(barBg);
+
+      const barFg = document.createElementNS('http://www.w3.org/2000/svg','rect');
+      barFg.setAttribute('x', n.x - barW/2); barFg.setAttribute('y', n.y + 17);
+      barFg.setAttribute('width', fillW); barFg.setAttribute('height', 3);
+      barFg.setAttribute('rx', 1); barFg.setAttribute('fill', c.stroke);
+      g.appendChild(barFg);
+
+    } else if (n.id === 'My Location') {
+      // hexagon-ish origin marker
+      const circle = document.createElementNS('http://www.w3.org/2000/svg','circle');
+      circle.setAttribute('cx', n.x); circle.setAttribute('cy', n.y);
+      circle.setAttribute('r', 22);
+      circle.setAttribute('class','map-node-origin');
+      g.appendChild(circle);
+
+      const t = document.createElementNS('http://www.w3.org/2000/svg','text');
+      t.setAttribute('x', n.x); t.setAttribute('y', n.y - 4);
+      t.setAttribute('class','node-label'); t.setAttribute('fill','#b8ff57');
+      t.textContent = 'YOU';
+      g.appendChild(t);
+      const t2 = document.createElementNS('http://www.w3.org/2000/svg','text');
+      t2.setAttribute('x', n.x); t2.setAttribute('y', n.y + 9);
+      t2.setAttribute('class','node-label-sm'); t2.setAttribute('fill','#b8ff57');
+      t2.textContent = '📍';
+      g.appendChild(t2);
+
+    } else {
+      // hallway node
+      const circle = document.createElementNS('http://www.w3.org/2000/svg','circle');
+      circle.setAttribute('cx', n.x); circle.setAttribute('cy', n.y);
+      circle.setAttribute('r', 18);
+      circle.setAttribute('class','map-node-hallway');
+      g.appendChild(circle);
+
+      const t = document.createElementNS('http://www.w3.org/2000/svg','text');
+      t.setAttribute('x', n.x); t.setAttribute('y', n.y);
+      t.setAttribute('class','node-label');
+      t.textContent = n.id.replace('_','\n').split('\n')[1] || n.id;
+      g.appendChild(t);
+    }
+
+    nLayer.appendChild(g);
+  });
+
+
+  if (path.length >= 2) {
+    const waypoints = path.map(id => {
+      const nd = nodeMap[id];
+      return nd ? {x: nd.x, y: nd.y} : null;
+    }).filter(Boolean);
+
+    if (waypoints.length >= 2) {
+      startTraveller(waypoints);
+    }
+  } else {
+    hideTraveller();
+  }
+}
+
+
+let animWaypoints = [];
+let animSeg = 0;
+let animT   = 0;
+const SPEED = 0.004; // fraction per frame
+
+function startTraveller(waypoints) {
+  // Only reset if path actually changed
+  const same = animWaypoints.length === waypoints.length &&
+    animWaypoints.every((w,i) => w.x===waypoints[i].x && w.y===waypoints[i].y);
+  if (!same) { animWaypoints = waypoints; animSeg = 0; animT = 0; }
+
+  const t   = document.getElementById('traveller');
+  const ring = document.getElementById('traveller-ring');
+  t.style.display    = 'block';
+  ring.style.display = 'block';
+
+  cancelAnimationFrame(rafId);
+  animateTraveller();
+}
+
+function hideTraveller() {
+  cancelAnimationFrame(rafId);
+  document.getElementById('traveller').style.display      = 'none';
+  document.getElementById('traveller-ring').style.display = 'none';
+}
+
+function animateTraveller() {
+  if (!animWaypoints.length) return;
+  animT += SPEED;
+  if (animT >= 1) {
+    animT = 0;
+    animSeg = (animSeg + 1) % (animWaypoints.length - 1);
+  }
+  const a = animWaypoints[animSeg];
+  const b = animWaypoints[animSeg + 1];
+  if (!a || !b) { rafId = requestAnimationFrame(animateTraveller); return; }
+
+  const x = a.x + (b.x - a.x) * easeInOut(animT);
+  const y = a.y + (b.y - a.y) * easeInOut(animT);
+
+  const t    = document.getElementById('traveller');
+  const ring = document.getElementById('traveller-ring');
+  t.setAttribute('cx', x);    t.setAttribute('cy', y);
+  ring.setAttribute('cx', x); ring.setAttribute('cy', y);
+
+  rafId = requestAnimationFrame(animateTraveller);
+}
+
+function easeInOut(t) { return t < 0.5 ? 2*t*t : -1+(4-2*t)*t; }
+
+function showToast(msg, type) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.className = `show ${type}`;
+  setTimeout(() => t.className = '', 3000);
+}
+
+renderConfigs();
+</script>
+</body>
+</html>
